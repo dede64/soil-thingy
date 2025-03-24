@@ -46,6 +46,10 @@ const SensorData = () => {
 
   const filteredData = data.slice(Math.max(data.length - range, 0));
   const labels = filteredData.map((entry) => new Date(entry.timestamp * 1000).toLocaleString());
+  const baseDatasetProps = {
+    fill: false,
+    tension: 0.2,
+  };
 
   const chartData = {
     labels,
@@ -53,113 +57,130 @@ const SensorData = () => {
       {
         label: "Temperature (°C)",
         data: filteredData.map((e) => e.temperature),
+        yAxisID: "y",
         borderColor: "rgb(75, 192, 192)",
         backgroundColor: "rgba(75, 192, 192, 0.2)",
-        fill: true,
+        ...baseDatasetProps,
       },
       {
         label: "Humidity (%)",
         data: filteredData.map((e) => e.humidity),
+        yAxisID: "y",
         borderColor: "rgb(153, 102, 255)",
         backgroundColor: "rgba(153, 102, 255, 0.2)",
-        fill: true,
+        ...baseDatasetProps,
       },
       {
         label: "Light Level (%)",
         data: filteredData.map((e) => e.light_level),
+        yAxisID: "y",
         borderColor: "rgb(255, 206, 86)",
         backgroundColor: "rgba(255, 206, 86, 0.2)",
-        fill: true,
+        ...baseDatasetProps,
       },
       {
         label: "Soil Moisture (%)",
         data: filteredData.map((e) => e.soil_moisture),
+        yAxisID: "y",
         borderColor: "rgb(54, 162, 235)",
         backgroundColor: "rgba(54, 162, 235, 0.2)",
-        fill: true,
+        ...baseDatasetProps,
       },
       // TSL2591
       {
         label: "TSL2591 Lux",
         data: filteredData.map((e) => e.tsl2591?.lux),
+        yAxisID: "y1",
         borderColor: "rgb(255, 99, 132)",
         backgroundColor: "rgba(255, 99, 132, 0.2)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "TSL2591 Visible",
         data: filteredData.map((e) => e.tsl2591?.visible),
+        yAxisID: "y1",
         borderColor: "rgb(255, 159, 64)",
         backgroundColor: "rgba(255, 159, 64, 0.2)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "TSL2591 IR",
         data: filteredData.map((e) => e.tsl2591?.ir),
+        yAxisID: "y1",
         borderColor: "rgb(201, 203, 207)",
         backgroundColor: "rgba(201, 203, 207, 0.2)",
-        fill: false,
+        ...baseDatasetProps,
       },
       // AS7341 spectral channels
       {
         label: "AS7341 415nm",
         data: filteredData.map((e) => e.as7341?.["415nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(255, 0, 0)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 445nm",
         data: filteredData.map((e) => e.as7341?.["445nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(255, 128, 0)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 480nm",
         data: filteredData.map((e) => e.as7341?.["480nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(255, 255, 0)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 515nm",
         data: filteredData.map((e) => e.as7341?.["515nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(128, 255, 0)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 555nm",
         data: filteredData.map((e) => e.as7341?.["555nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(0, 255, 0)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 590nm",
         data: filteredData.map((e) => e.as7341?.["590nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(0, 255, 128)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 630nm",
         data: filteredData.map((e) => e.as7341?.["630nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(0, 255, 255)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 680nm",
         data: filteredData.map((e) => e.as7341?.["680nm"]),
+        yAxisID: "y2",
         borderColor: "rgb(0, 128, 255)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 Clear",
         data: filteredData.map((e) => e.as7341?.["clear"]),
+        yAxisID: "y2",
         borderColor: "rgb(0, 0, 255)",
-        fill: false,
+        ...baseDatasetProps,
       },
       {
         label: "AS7341 NIR",
         data: filteredData.map((e) => e.as7341?.["nir"]),
+        yAxisID: "y2",
         borderColor: "rgb(128, 0, 255)",
-        fill: false,
+        ...baseDatasetProps,
       },
     ],
   };
@@ -190,8 +211,38 @@ const SensorData = () => {
     scales: {
       y: {
         beginAtZero: true,
+        type: "linear",
+        position: "left",
+        title: {
+          display: true,
+          text: "Temperature / Humidity / Soil / Light Level",
+        },
       },
-    },
+      y1: {
+        beginAtZero: true,
+        type: "linear",
+        position: "right",
+        grid: {
+          drawOnChartArea: false,
+        },
+        title: {
+          display: true,
+          text: "Lux / TSL2591",
+        },
+      },
+      y2: {
+        beginAtZero: true,
+        type: "linear",
+        position: "right",
+        grid: {
+          drawOnChartArea: false,
+        },
+        title: {
+          display: true,
+          text: "AS7341 Spectral Values",
+        },
+      },
+    }    
   };
 
   return (
