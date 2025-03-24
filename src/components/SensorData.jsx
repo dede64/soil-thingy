@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+// ...imports (unchanged)
+import React, { useState, useEffect, useRef } from "react";
+import "chartjs-adapter-date-fns";
 import { database, ref, onValue } from "../firebaseConfig";
 import { Line } from "react-chartjs-2";
 import {
@@ -9,10 +11,10 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale
 } from "chart.js";
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -20,12 +22,20 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale
 );
 
 const SensorData = () => {
+  const chartRef = useRef(null);
   const [data, setData] = useState([]);
-  const [range, setRange] = useState(10);
+  const [range, setRange] = useState(0); // default: 15 minutes
+  const timeRangeSeconds = {
+    0: 15 * 60,
+    1: 60 * 60,
+    2: 24 * 60 * 60,
+    3: 7 * 24 * 60 * 60
+  };
 
   useEffect(() => {
     const sensorRef = ref(database, "sensorData");
@@ -34,7 +44,7 @@ const SensorData = () => {
       if (snapshot.exists()) {
         const rawData = snapshot.val();
         const formattedData = Object.entries(rawData).map(([timestamp, values]) => ({
-          timestamp,
+          timestamp: Number(timestamp),
           ...values,
         }));
         setData(formattedData);
@@ -44,19 +54,23 @@ const SensorData = () => {
     });
   }, []);
 
-  const filteredData = data.slice(Math.max(data.length - range, 0));
-  const labels = filteredData.map((entry) => new Date(entry.timestamp * 1000).toLocaleString());
+  const nowTimestamp = Math.floor(Date.now() / 1000);
+  const secondsToKeep = timeRangeSeconds[range];
+
+  const filteredData = data.filter(
+    (entry) => nowTimestamp - entry.timestamp <= secondsToKeep
+  );
+
   const baseDatasetProps = {
     fill: false,
     tension: 0.2,
   };
 
   const chartData = {
-    labels,
     datasets: [
       {
         label: "Temperature (°C)",
-        data: filteredData.map((e) => e.temperature),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.temperature })),
         yAxisID: "y",
         borderColor: "rgb(75, 192, 192)",
         backgroundColor: "rgba(75, 192, 192, 0.2)",
@@ -64,7 +78,7 @@ const SensorData = () => {
       },
       {
         label: "Humidity (%)",
-        data: filteredData.map((e) => e.humidity),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.humidity })),
         yAxisID: "y",
         borderColor: "rgb(153, 102, 255)",
         backgroundColor: "rgba(153, 102, 255, 0.2)",
@@ -72,7 +86,7 @@ const SensorData = () => {
       },
       {
         label: "Light Level (%)",
-        data: filteredData.map((e) => e.light_level),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.light_level })),
         yAxisID: "y",
         borderColor: "rgb(255, 206, 86)",
         backgroundColor: "rgba(255, 206, 86, 0.2)",
@@ -80,109 +94,72 @@ const SensorData = () => {
       },
       {
         label: "Soil Moisture (%)",
-        data: filteredData.map((e) => e.soil_moisture),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.soil_moisture })),
         yAxisID: "y",
         borderColor: "rgb(54, 162, 235)",
         backgroundColor: "rgba(54, 162, 235, 0.2)",
         ...baseDatasetProps,
       },
-      // TSL2591
       {
         label: "TSL2591 Lux",
-        data: filteredData.map((e) => e.tsl2591?.lux),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.tsl2591?.lux })),
         yAxisID: "y1",
         borderColor: "rgb(255, 99, 132)",
-        backgroundColor: "rgba(255, 99, 132, 0.2)",
         ...baseDatasetProps,
       },
       {
         label: "TSL2591 Visible",
-        data: filteredData.map((e) => e.tsl2591?.visible),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.tsl2591?.visible })),
         yAxisID: "y1",
         borderColor: "rgb(255, 159, 64)",
-        backgroundColor: "rgba(255, 159, 64, 0.2)",
         ...baseDatasetProps,
       },
       {
         label: "TSL2591 IR",
-        data: filteredData.map((e) => e.tsl2591?.ir),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.tsl2591?.ir })),
         yAxisID: "y1",
         borderColor: "rgb(201, 203, 207)",
-        backgroundColor: "rgba(201, 203, 207, 0.2)",
         ...baseDatasetProps,
       },
-      // AS7341 spectral channels
-      {
-        label: "AS7341 415nm",
-        data: filteredData.map((e) => e.as7341?.["415nm"]),
+      ...[
+        "415nm", "445nm", "480nm", "515nm", "555nm",
+        "590nm", "630nm", "680nm", "clear", "nir"
+      ].map((band, i) => ({
+        label: `AS7341 ${band.toUpperCase()}`,
+        data: filteredData.map((e) => ({
+          x: new Date(e.timestamp * 1000),
+          y: e.as7341?.[band]
+        })),
         yAxisID: "y2",
-        borderColor: "rgb(255, 0, 0)",
+        borderColor: `hsl(${i * 36}, 100%, 50%)`,
         ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 445nm",
-        data: filteredData.map((e) => e.as7341?.["445nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(255, 128, 0)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 480nm",
-        data: filteredData.map((e) => e.as7341?.["480nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(255, 255, 0)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 515nm",
-        data: filteredData.map((e) => e.as7341?.["515nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(128, 255, 0)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 555nm",
-        data: filteredData.map((e) => e.as7341?.["555nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(0, 255, 0)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 590nm",
-        data: filteredData.map((e) => e.as7341?.["590nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(0, 255, 128)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 630nm",
-        data: filteredData.map((e) => e.as7341?.["630nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(0, 255, 255)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 680nm",
-        data: filteredData.map((e) => e.as7341?.["680nm"]),
-        yAxisID: "y2",
-        borderColor: "rgb(0, 128, 255)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 Clear",
-        data: filteredData.map((e) => e.as7341?.["clear"]),
-        yAxisID: "y2",
-        borderColor: "rgb(0, 0, 255)",
-        ...baseDatasetProps,
-      },
-      {
-        label: "AS7341 NIR",
-        data: filteredData.map((e) => e.as7341?.["nir"]),
-        yAxisID: "y2",
-        borderColor: "rgb(128, 0, 255)",
-        ...baseDatasetProps,
-      },
-    ],
+      })),
+    ]
+  };
+
+  const toggleGroup = (groupName) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const groups = {
+      tsl2591: ["TSL2591 Lux", "TSL2591 Visible", "TSL2591 IR"],
+      as7341: [
+        "AS7341 415NM", "AS7341 445NM", "AS7341 480NM", "AS7341 515NM",
+        "AS7341 555NM", "AS7341 590NM", "AS7341 630NM", "AS7341 680NM",
+        "AS7341 CLEAR", "AS7341 NIR"
+      ]
+    };
+
+    const targetLabels = groups[groupName];
+
+    chart.data.datasets.forEach((dataset, index) => {
+      if (targetLabels.includes(dataset.label.toUpperCase())) {
+        const meta = chart.getDatasetMeta(index);
+        meta.hidden = meta.hidden === null ? true : !meta.hidden;
+      }
+    });
+
+    chart.update();
   };
 
   const options = {
@@ -209,9 +186,19 @@ const SensorData = () => {
       intersect: false,
     },
     scales: {
+      x: {
+        type: "time",
+        time: {
+          unit: "minute",
+          tooltipFormat: "PPpp",
+        },
+        title: {
+          display: true,
+          text: "Time",
+        },
+      },
       y: {
         beginAtZero: true,
-        type: "linear",
         position: "left",
         title: {
           display: true,
@@ -220,53 +207,79 @@ const SensorData = () => {
       },
       y1: {
         beginAtZero: true,
-        type: "linear",
         position: "right",
-        grid: {
-          drawOnChartArea: false,
-        },
+        grid: { drawOnChartArea: false },
         title: {
           display: true,
-          text: "Lux / TSL2591",
+          text: "TSL2591",
         },
       },
       y2: {
         beginAtZero: true,
-        type: "linear",
         position: "right",
-        grid: {
-          drawOnChartArea: false,
-        },
+        grid: { drawOnChartArea: false },
         title: {
           display: true,
-          text: "AS7341 Spectral Values",
+          text: "AS7341",
         },
       },
-    }    
+    },
   };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800">Sensor Data</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">Sensor Data</h1>
+
+      <div className="flex gap-4 mb-4">
+        <button
+          onClick={() => toggleGroup("tsl2591")}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Toggle TSL2591
+        </button>
+        <button
+          onClick={() => toggleGroup("as7341")}
+          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+        >
+          Toggle AS7341
+        </button>
+      </div>
 
       <div className="my-4">
-        <label htmlFor="range" className="block text-gray-700">
-          Select the range of data to display (last X entries):
+        <label htmlFor="range" className="block text-gray-700 mb-2">
+          Select time range to display:
         </label>
+
         <input
           id="range"
           type="range"
-          min="1"
-          max={Math.max(data.length, 1)}
+          min="0"
+          max="3"
+          step="1"
           value={range}
           onChange={(e) => setRange(Number(e.target.value))}
           className="w-full"
         />
-        <div className="text-center">{`Last ${range} entries`}</div>
+
+        <div className="text-center mt-2 font-medium">
+          Showing last: {{
+            0: "15 minutes",
+            1: "1 hour",
+            2: "1 day",
+            3: "1 week"
+          }[range]}
+        </div>
+
+        <div className="flex justify-between text-xs mt-1 text-gray-600">
+          <span>15m</span>
+          <span>1h</span>
+          <span>1d</span>
+          <span>1w</span>
+        </div>
       </div>
 
-      {data.length > 0 ? (
-        <Line data={chartData} options={options} />
+      {filteredData.length > 0 ? (
+        <Line ref={chartRef} data={chartData} options={options} />
       ) : (
         <p className="text-center">No data available.</p>
       )}
