@@ -128,6 +128,7 @@ const SensorData = () => {
         yAxisID: "y",
         borderColor: "rgb(54, 162, 235)",
         backgroundColor: "rgba(54, 162, 235, 0.2)",
+        hidden: true,
         ...baseDatasetProps,
       },
       {
