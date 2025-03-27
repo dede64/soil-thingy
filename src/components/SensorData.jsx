@@ -59,12 +59,14 @@ ChartJS.register(startValueLabelsPlugin);
 const SensorData = () => {
   const chartRef = useRef(null);
   const [data, setData] = useState([]);
-  const [range, setRange] = useState(0); // default: 15 minutes
+  const [range, setRange] = useState(1); // default: 1 hour
   const timeRangeSeconds = {
     0: 15 * 60,
     1: 60 * 60,
-    2: 24 * 60 * 60,
-    3: 7 * 24 * 60 * 60
+    2: 4 * 60 * 60,
+    3: 12 * 60 * 60,
+    4: 24 * 60 * 60,
+    5: 7 * 24 * 60 * 60
   };
 
   useEffect(() => {
@@ -283,27 +285,45 @@ const SensorData = () => {
         </button>
       </div>
   
-      <div className="w-full max-w-4xl mx-auto my-6 p-6 rounded-xl border bg-white shadow-lg">
+      <div className="my-6 p-6 rounded-xl border bg-white shadow-lg">
         <div className="flex items-center justify-between mb-4">
-          <label htmlFor="range" className="text-gray-700 font-semibold text-lg">
+          <label htmlFor="range" className="text-gray-700 font-semibold text-lg flex items-center gap-2">
             ⏱️ Time Range
           </label>
           <span className="text-sm text-gray-600">
-            {{"0": " 15 minutes", "1": " 1 hour", "2": " 1 day", "3": " 1 week"}[range]}
+            {{
+              0: "15 minutes",
+              1: "1 hour",
+              2: "4 hours",
+              3: "12 hours",
+              4: "1 day",
+              5: "1 week"
+            }[range]}
           </span>
         </div>
-  
+
         <input
           id="range"
           type="range"
           min="0"
-          max="3"
+          max="5"
           step="1"
           value={range}
           onChange={(e) => setRange(Number(e.target.value))}
           className="w-full accent-blue-600 cursor-pointer"
         />
+
+        {/* Marks below the slider */}
+        <div className="flex justify-between mt-2 text-xs text-gray-500 font-medium px-1">
+          <span>15m</span>
+          <span>1h</span>
+          <span>4h</span>
+          <span>12h</span>
+          <span>1d</span>
+          <span>1w</span>
+        </div>
       </div>
+
   
       <div className="flex-grow min-h-[400px] w-full max-w-7xl mx-auto px-2">
         {filteredData.length > 0 ? (
