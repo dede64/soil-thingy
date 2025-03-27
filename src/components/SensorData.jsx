@@ -26,6 +26,36 @@ ChartJS.register(
   TimeScale
 );
 
+const startValueLabelsPlugin = {
+  id: 'startValueLabels',
+  afterDatasetsDraw(chart, args, pluginOptions) {
+    if (!pluginOptions.display) return;
+
+    const { ctx } = chart;
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (meta.hidden || !meta.data.length) return;
+
+      const firstPoint = meta.data.find(point => point !== null);
+      if (!firstPoint) return;
+
+      const x = firstPoint.x;
+      const y = firstPoint.y;
+
+      ctx.save();
+      ctx.font = "12px sans-serif";
+      ctx.fillStyle = dataset.borderColor;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom"; // so it appears above
+      ctx.fillText(dataset.label, x + 6, y - 6); // shift label right and upward
+      ctx.restore();
+    });
+  },
+};
+
+ChartJS.register(startValueLabelsPlugin);
+
 const SensorData = () => {
   const chartRef = useRef(null);
   const [data, setData] = useState([]);
@@ -178,6 +208,9 @@ const SensorData = () => {
         labels: {
           boxWidth: 10,
         },
+      },
+      startValueLabels: {
+        display: true,
       },
     },
     interaction: {
