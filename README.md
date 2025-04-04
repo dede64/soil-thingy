@@ -80,6 +80,10 @@ or
 
 The app should now be running at http://localhost:3000 or some other port :]
 
+To run the server open to the public network - start it with the following command:
+
+`npm run dev -- --host`
+
 
 # Features
 
