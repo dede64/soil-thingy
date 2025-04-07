@@ -1,4 +1,3 @@
-// ...imports (unchanged)
 import React, { useState, useEffect, useRef } from "react";
 import "chartjs-adapter-date-fns";
 import { database, ref, onValue } from "../firebaseConfig";
@@ -47,8 +46,8 @@ const startValueLabelsPlugin = {
       ctx.font = "12px sans-serif";
       ctx.fillStyle = dataset.borderColor;
       ctx.textAlign = "left";
-      ctx.textBaseline = "bottom"; // so it appears above
-      ctx.fillText(dataset.label, x + 6, y - 6); // shift label right and upward
+      ctx.textBaseline = "bottom";
+      ctx.fillText(dataset.label, x + 6, y - 6);
       ctx.restore();
     });
   },
@@ -59,7 +58,13 @@ ChartJS.register(startValueLabelsPlugin);
 const SensorData = () => {
   const chartRef = useRef(null);
   const [data, setData] = useState([]);
-  const [range, setRange] = useState(1); // default: 1 hour
+  const [sensorIds, setSensorIds] = useState([]);
+  const [selectedSensorId, setSelectedSensorId] = useState(() => {
+    return localStorage.getItem("selectedSensorId") || null;
+  });
+  const [hasAutoSelectedSensor, setHasAutoSelectedSensor] = useState(false);
+  const [range, setRange] = useState(1);
+
   const timeRangeSeconds = {
     0: 15 * 60,
     1: 60 * 60,
@@ -70,9 +75,36 @@ const SensorData = () => {
   };
 
   useEffect(() => {
-    const sensorRef = ref(database, "sensorData");
+    const sensorsRef = ref(database, "sensors");
+    onValue(sensorsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const ids = Object.keys(snapshot.val());
+        setSensorIds(ids);
+  
+        if (!hasAutoSelectedSensor) {
+          const storedSensorId = localStorage.getItem("selectedSensorId");
+          const fallbackSensorId = storedSensorId && ids.includes(storedSensorId)
+            ? storedSensorId
+            : ids[0];
+  
+          setSelectedSensorId(fallbackSensorId);
+          setHasAutoSelectedSensor(true);
+        }
+      }
+    });
+  }, [hasAutoSelectedSensor]);
 
-    onValue(sensorRef, (snapshot) => {
+  useEffect(() => {
+    if (selectedSensorId) {
+      localStorage.setItem("selectedSensorId", selectedSensorId);
+    }
+  }, [selectedSensorId]);
+
+  useEffect(() => {
+    if (!selectedSensorId) return;
+
+    const sensorRef = ref(database, `sensors/${selectedSensorId}`);
+    const unsubscribe = onValue(sensorRef, (snapshot) => {
       if (snapshot.exists()) {
         const rawData = snapshot.val();
         const formattedData = Object.entries(rawData).map(([timestamp, values]) => ({
@@ -84,7 +116,9 @@ const SensorData = () => {
         setData([]);
       }
     });
-  }, []);
+
+    return () => unsubscribe();
+  }, [selectedSensorId]);
 
   const nowTimestamp = Math.floor(Date.now() / 1000);
   const secondsToKeep = timeRangeSeconds[range];
@@ -118,7 +152,7 @@ const SensorData = () => {
       },
       {
         label: "Light Level (%)",
-        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.light_level })),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.light })),
         yAxisID: "y",
         borderColor: "rgb(255, 206, 86)",
         backgroundColor: "rgba(255, 206, 86, 0.2)",
@@ -126,7 +160,7 @@ const SensorData = () => {
       },
       {
         label: "Soil Moisture (%)",
-        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.soil_moisture })),
+        data: filteredData.map((e) => ({ x: new Date(e.timestamp * 1000), y: e.moisture })),
         yAxisID: "y",
         borderColor: "rgb(54, 162, 235)",
         backgroundColor: "rgba(54, 162, 235, 0.2)",
@@ -266,10 +300,26 @@ const SensorData = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-100 flex flex-col px-4 py-6">
-      <h1 className="text-4xl font-extrabold text-gray-900 mb-6 tracking-tight text-center">
+      <h1 className="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight text-center">
         🌱 Soil thingy
       </h1>
-  
+
+      {sensorIds.length > 0 && (
+        <div className="flex justify-center mb-6">
+          <select
+            value={selectedSensorId}
+            onChange={(e) => setSelectedSensorId(e.target.value)}
+            className="px-4 py-2 rounded-md border border-gray-300 shadow-sm text-gray-700"
+          >
+            {sensorIds.map((id) => (
+              <option key={id} value={id}>
+                Sensor: {id}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-4 justify-center mb-6">
         <button
           onClick={() => toggleGroup("tsl2591")}
@@ -284,7 +334,7 @@ const SensorData = () => {
           Toggle AS7341
         </button>
       </div>
-  
+
       <div className="my-6 p-6 rounded-xl border bg-white shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <label htmlFor="range" className="text-gray-700 font-semibold text-lg flex items-center gap-2">
@@ -313,7 +363,6 @@ const SensorData = () => {
           className="w-full accent-blue-600 cursor-pointer"
         />
 
-        {/* Marks below the slider */}
         <div className="flex justify-between mt-2 text-xs text-gray-500 font-medium px-1">
           <span>15m</span>
           <span>1h</span>
@@ -324,7 +373,6 @@ const SensorData = () => {
         </div>
       </div>
 
-  
       <div className="flex-grow min-h-[400px] w-full max-w-7xl mx-auto px-2">
         {filteredData.length > 0 ? (
           <Line ref={chartRef} data={chartData} options={options} />
@@ -334,7 +382,6 @@ const SensorData = () => {
       </div>
     </div>
   );
-  
 };
 
 export default SensorData;
