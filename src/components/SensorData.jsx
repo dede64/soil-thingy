@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "chartjs-adapter-date-fns";
 import { database, ref, onValue } from "../firebaseConfig";
-import { Line } from "react-chartjs-2";
 import SensorChart from "./SensorChart";
 import {
   Chart as ChartJS,
@@ -57,14 +56,13 @@ const startValueLabelsPlugin = {
 ChartJS.register(startValueLabelsPlugin);
 
 const SensorData = () => {
-  const chartRef = useRef(null);
   const [data, setData] = useState([]);
   const [sensorIds, setSensorIds] = useState([]);
   const [selectedSensorId, setSelectedSensorId] = useState(() => {
     return localStorage.getItem("selectedSensorId") || null;
   });
   const [hasAutoSelectedSensor, setHasAutoSelectedSensor] = useState(false);
-  const [range, setRange] = useState(1);
+  const [range, setRange] = useState(0);
 
   const timeRangeSeconds = {
     0: 15 * 60,
@@ -210,57 +208,36 @@ const SensorData = () => {
         🌱 Soil thingy
       </h1>
 
-      {sensorIds.length > 0 && (
-        <div className="flex justify-center mb-6">
-          <select
-            value={selectedSensorId}
-            onChange={(e) => setSelectedSensorId(e.target.value)}
-            className="px-4 py-2 rounded-md border border-gray-300 shadow-sm text-gray-700"
-          >
-            {sensorIds.map((id) => (
-              <option key={id} value={id}>
-                Sensor: {id}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="flex justify-center items-center gap-4 mb-6">
+        <label htmlFor="sensorSelect" className="text-lg font-medium text-gray-700">
+          Sensor:
+        </label>
+        <select
+          id="sensorSelect"
+          value={selectedSensorId}
+          onChange={(e) => setSelectedSensorId(e.target.value)}
+          className="px-10 py-8 rounded-md bg-white border border-gray-300 shadow font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {sensorIds.map((id) => (
+            <option key={id} value={id}>
+              {id}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <div className="my-6 p-6 rounded-xl border bg-white shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <label htmlFor="range" className="text-gray-700 font-semibold text-lg flex items-center gap-2">
-            ⏱️ Time Range
-          </label>
-          <span className="text-sm text-gray-600">
-            {{
-              0: "15 minutes",
-              1: "1 hour",
-              2: "4 hours",
-              3: "12 hours",
-              4: "1 day",
-              5: "1 week"
-            }[range]}
-          </span>
-        </div>
-
+      <div className="max-w-2xl w-full mx-auto my-4 px-4">
         <input
-          id="range"
           type="range"
           min="0"
           max="5"
           step="1"
           value={range}
           onChange={(e) => setRange(Number(e.target.value))}
-          className="w-full accent-blue-600 cursor-pointer"
+          className="w-full"
         />
-
-        <div className="flex justify-between mt-2 text-xs text-gray-500 font-medium px-1">
-          <span>15m</span>
-          <span>1h</span>
-          <span>4h</span>
-          <span>12h</span>
-          <span>1d</span>
-          <span>1w</span>
+        <div className="flex justify-between text-xs mt-1 px-1">
+          <span>15m</span><span>1h</span><span>4h</span><span>12h</span><span>1d</span><span>1w</span>
         </div>
       </div>
 

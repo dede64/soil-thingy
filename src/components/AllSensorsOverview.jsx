@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { database, ref, onValue } from "../firebaseConfig";
 import SensorChart from "./SensorChart";
-import { Line } from "react-chartjs-2";
 import "chartjs-adapter-date-fns";
 import {
   Chart as ChartJS,
@@ -19,7 +18,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const AllSensorsOverview = () => {
   const [sensorData, setSensorData] = useState({});
-  const [range, setRange] = useState(1);
+  const [range, setRange] = useState(0);
 
   const timeRangeSeconds = {
     0: 15 * 60,
